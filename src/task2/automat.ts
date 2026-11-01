@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 
 export async function getToken(
 	authority: string, //adresa Auth0 tenanta
-	audience: string, //ID API-a
+	audience: string,
 	clientId: string,
 	clientSecret: string, //username i password automata
 	scope: string, //dozvole koje se traze, npr. create:passes

@@ -12,15 +12,15 @@ const token = await getToken(
 );
 
 await issuePass(
-	"http://localhost:3000/passes",
+	"https://passes-web.onrender.com/passes",
 	token,
-	"Marko Horvat",
+	"Ivan Turkalj",
 	"HR-123456789",
 );
 await issuePass(
-	"http://localhost:3000/passes",
+	"https://passes-web.onrender.com/passes",
 	token,
-	"Pero Perić",
+	"Jan Koljenić",
 	"HR-987654321",
 );
 console.log("Izdane 2 propusnice");

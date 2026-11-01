@@ -18,10 +18,9 @@ import {
 	listPasses,
 } from "./db.js";
 
-// express-openid-connect je CommonJS paket, pa requiresAuth nije dostupan kao named import
 const { auth: oidcAuth, requiresAuth } = oidc;
 
-// ---------- konfiguracija iz environment varijabli ----------
+//citanje env varijable, ako je nema, rusi apk sa porukom
 function requireEnv(name: string): string {
 	const value = process.env[name];
 	if (!value) throw new Error(`Environment variable ${name} is not set`);
@@ -29,12 +28,13 @@ function requireEnv(name: string): string {
 }
 
 const PORT = Number(process.env.PORT ?? 3000);
-// Render sam postavlja RENDER_EXTERNAL_URL, lokalno koristimo BASE_URL iz .env
-const BASE_URL = (
-	process.env.BASE_URL ??
-	process.env.RENDER_EXTERNAL_URL ??
-	`http://localhost:${PORT}`
-).replace(/\/+$/, "");
+const BASE_URL = //uzima se ova druga jer smo an renderu, nema .env na oblaku, uzeo bi prvi da pokrecem apk lokalno
+	(
+		process.env.BASE_URL ??
+		process.env.RENDER_EXTERNAL_URL ??
+		`http://localhost:${PORT}`
+	).replace(/\/+$/, "");
+
 const ISSUER = requireEnv("AUTH0_ISSUER_BASE_URL");
 const AUDIENCE = requireEnv("AUTH0_AUDIENCE");
 const CLIENT_ID = requireEnv("AUTH0_CLIENT_ID");
@@ -42,16 +42,14 @@ const CLIENT_SECRET = requireEnv("AUTH0_CLIENT_SECRET");
 const SESSION_SECRET = requireEnv("SESSION_SECRET");
 
 const app = express();
-app.set("trust proxy", true); // Render je ispred nas kao HTTPS proxy
+app.set("trust proxy", true); // Render je ispred kao HTTPS proxy
 app.set("view engine", "ejs");
 app.set(
 	"views",
 	path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "views"),
 );
 
-// ---------- API za automat: OAuth2 Client Credentials (M2M) ----------
-// "Zaštitar": provjerava potpis, iss, aud i exp access tokena. Bez tokena / nevaljan -> 401.
-const checkJwt = jwtAuth({ issuerBaseURL: ISSUER, audience: AUDIENCE });
+const checkJwt = jwtAuth({ issuerBaseURL: ISSUER, audience: AUDIENCE }); //middleware protector, accepta samo tokene potpisane od naseg authoritya
 
 app.get(
 	"/passes/:id",
@@ -63,7 +61,7 @@ app.get(
 			res.status(404).json({ error: "Pass not found" });
 			return;
 		}
-		res.json(pass);
+		res.json(pass); //dobijemo pass
 	},
 );
 
@@ -88,7 +86,6 @@ app.post(
 		}
 
 		const pass = await createPass(name.trim(), document.trim());
-		// QR vodi na JAVNU stranicu, Location na API pristupnu točku
 		const png = await QRCode.toBuffer(`${BASE_URL}/info/${pass.id}`, {
 			type: "png",
 			width: 300,
@@ -102,24 +99,22 @@ app.post(
 	},
 );
 
-// ---------- web stranice: OpenID Connect login korisnika ----------
-app.use(
-	oidcAuth({
-		authRequired: false, // početna i /info su javne
-		auth0Logout: true,
-		issuerBaseURL: ISSUER,
-		baseURL: BASE_URL,
-		clientID: CLIENT_ID,
-		clientSecret: CLIENT_SECRET,
-		secret: SESSION_SECRET,
-		// Authorization Code flow: Auth0 server vraća "code" na /callback, a server ga uz
-		// client_secret mijenja za ID token. Radi i preko http://localhost.
-		authorizationParams: {
-			response_type: "code",
-			scope: "openid profile email",
-		},
-	}),
-);
+const oidcMiddleware = oidcAuth({
+	authRequired: false,
+	auth0Logout: true,
+	issuerBaseURL: ISSUER,
+	baseURL: BASE_URL,
+	clientID: CLIENT_ID,
+	clientSecret: CLIENT_SECRET,
+	secret: SESSION_SECRET,
+	authorizationParams: {
+		response_type: "code",
+		scope: "openid profile email",
+	},
+});
+
+//sve rute ispod ove linije prolaze kroz Middleware
+app.use(oidcMiddleware);
 
 app.get("/", async (req, res) => {
 	const stats = await getStats();
@@ -137,20 +132,18 @@ app.get("/info/:id", async (req, res) => {
 	res.render("info", { pass });
 });
 
-const form = express.urlencoded({ extended: false });
-
-app.post("/admin/passes/:id/cancel", requiresAuth(), form, async (req, res) => {
+app.post("/admin/passes/:id/cancel", requiresAuth(), async (req, res) => {
 	await cancelPass(req.params.id as string);
 	res.redirect("/");
 });
 
-app.post("/admin/passes/:id/delete", requiresAuth(), form, async (req, res) => {
+app.post("/admin/passes/:id/delete", requiresAuth(), async (req, res) => {
 	await deletePass(req.params.id as string);
 	res.redirect("/");
 });
 
-// ---------- greške ----------
 app.use(
+	//error handler
 	(
 		err: { status?: number; statusCode?: number; message?: string },
 		req: Request,
@@ -158,9 +151,14 @@ app.use(
 		_next: NextFunction,
 	) => {
 		const status = err.status ?? err.statusCode ?? 500;
-		if (status >= 500) console.error(err);
+
+		if (status >= 500) {
+			console.error(err);
+		}
+
 		const message =
 			status >= 500 ? "Internal server error" : (err.message ?? "Error");
+
 		if (req.path.startsWith("/passes")) {
 			res.status(status).json({ error: message });
 		} else {
