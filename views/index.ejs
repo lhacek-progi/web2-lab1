@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="hr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Propusnice</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+        header { display: flex; justify-content: space-between; align-items: center; }
+        .stats { display: flex; gap: 1rem; margin: 1.5rem 0; }
+        .stat { border: 1px solid #ddd; border-radius: 8px; padding: 1rem 1.5rem; }
+        .stat b { display: block; font-size: 2rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #eee; }
+        .ACTIVE { color: #137333; font-weight: 600; }
+        .CANCELLED { color: #b3261e; font-weight: 600; }
+        form { display: inline; }
+        button { cursor: pointer; }
+        a.btn { padding: .4rem .9rem; border: 1px solid #333; border-radius: 6px; text-decoration: none; color: #222; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Digitalne propusnice</h1>
+    <% if (loggedIn) { %>
+        <div><%= user.email || user.name %> &nbsp; <a class="btn" href="/logout">Odjava</a></div>
+    <% } else { %>
+        <a class="btn" href="/login">Prijava</a>
+    <% } %>
+</header>
+
+<div class="stats">
+    <div class="stat">Ukupno propusnica <b><%= stats.total %></b></div>
+    <div class="stat">Aktivnih propusnica <b><%= stats.active %></b></div>
+</div>
+
+<% if (loggedIn) { %>
+    <h2>Pregled propusnica</h2>
+    <% if (passes.length === 0) { %>
+        <p>Nema propusnica.</p>
+    <% } else { %>
+        <table>
+            <thead>
+            <tr><th>Ime i prezime</th><th>Dokument</th><th>Izdano</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+            <% passes.forEach(p => { %>
+                <tr>
+                    <td><a href="/info/<%= p.id %>"><%= p.name %></a></td>
+                    <td><%= p.document %></td>
+                    <td><%= new Date(p.issuedAt).toLocaleString("hr-HR", { timeZone: "Europe/Zagreb" }) %></td>
+                    <td class="<%= p.status %>"><%= p.status %></td>
+                    <td>
+                        <% if (p.status === "ACTIVE") { %>
+                            <form method="post" action="/admin/passes/<%= p.id %>/cancel">
+                                <button type="submit">Poništi</button>
+                            </form>
+                        <% } %>
+                        <form method="post" action="/admin/passes/<%= p.id %>/delete"
+                              onsubmit="return confirm('Obrisati propusnicu?')">
+                            <button type="submit">Obriši</button>
+                        </form>
+                    </td>
+                </tr>
+            <% }) %>
+            </tbody>
+        </table>
+    <% } %>
+<% } %>
+</body>
+</html>

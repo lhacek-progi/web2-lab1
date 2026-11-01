@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="hr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Propusnica</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 480px; margin: 3rem auto; padding: 0 1rem; color: #222; }
+        .card { border: 1px solid #ddd; border-radius: 12px; padding: 1.5rem; }
+        .status { font-size: 1.5rem; font-weight: 700; padding: .5rem 1rem; border-radius: 8px; display: inline-block; }
+        .ACTIVE { background: #e6f4ea; color: #137333; }
+        .CANCELLED { background: #fce8e6; color: #b3261e; }
+        dt { color: #666; margin-top: 1rem; }
+        dd { margin: 0; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+<% if (!pass) { %>
+    <h1>404</h1>
+    <p>Propusnica ne postoji.</p>
+<% } else { %>
+    <div class="card">
+        <span class="status <%= pass.status %>"><%= pass.status %></span>
+        <dl>
+            <dt>Ime i prezime</dt><dd><%= pass.name %></dd>
+            <dt>Oznaka dokumenta</dt><dd><%= pass.document %></dd>
+            <dt>Vrijeme izdavanja</dt>
+            <dd><%= new Date(pass.issuedAt).toLocaleString("hr-HR", { timeZone: "Europe/Zagreb" }) %></dd>
+            <dt>Identifikator</dt><dd><code><%= pass.id %></code></dd>
+        </dl>
+    </div>
+<% } %>
+</body>
+</html>
