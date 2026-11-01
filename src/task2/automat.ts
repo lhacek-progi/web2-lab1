@@ -2,18 +2,17 @@ import { Buffer } from "node:buffer";
 import { writeFile } from "node:fs/promises";
 
 export async function getToken(
-	authority: string, //adresa Auth0 tenanta
+	authority: string,
 	audience: string,
 	clientId: string,
-	clientSecret: string, //username i password automata
-	scope: string, //dozvole koje se traze, npr. create:passes
+	clientSecret: string,
+	scope: string,
 ): Promise<string> {
-	const tokenUrl = `${authority.replace(/\/+$/, "")}/oauth/token`; //adresa token enpointa, regex za brisanje vise od jedne kose crte
+	const tokenUrl = `${authority.replace(/\/+$/, "")}/oauth/token`;
 
 	const response = await fetch(tokenUrl, {
-		//slanje http requesta i cekanje responsea
-		method: "POST", //saljemo podatke
-		headers: { "Content-Type": "application/x-www-form-urlencoded" }, //standard za token enpoint po RFC-u
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
 			grant_type: "client_credentials",
 			client_id: clientId,
@@ -27,7 +26,7 @@ export async function getToken(
 		throw new Error(`Token request failed with status ${response.status}`);
 	}
 
-	const data = (await response.json()) as { access_token?: string }; //response vracen u JSON-u, obecamo typescriptu sda je acess_token polje tipa string
+	const data = (await response.json()) as { access_token?: string };
 	if (!data.access_token) {
 		throw new Error(
 			`Token response did not contain access_token (status ${response.status})`,
@@ -37,16 +36,16 @@ export async function getToken(
 }
 
 export async function issuePass(
-	url: string, //adresa enpointa (https://tvojapp.onrender.com/passes)
+	url: string,
 	token: string,
 	name: string,
-	document: string, //podaci osobe za koju se issuea pass
+	document: string,
 ): Promise<void> {
 	const response = await fetch(url, {
 		method: "POST",
 		headers: {
 			Authorization: `Bearer ${token}`,
-			"Content-Type": "application/json", //body poruke je JSON objekt
+			"Content-Type": "application/json",
 			Accept: "image/png",
 		},
 		body: JSON.stringify({ name, document }),
@@ -56,7 +55,7 @@ export async function issuePass(
 		throw new Error(`Issue pass request failed with status ${response.status}`);
 	}
 
-	const location = response.headers.get("location"); //REST api garantira da vraca resurs pod location headerom
+	const location = response.headers.get("location");
 	if (!location) {
 		throw new Error(
 			`Location header missing in response (status ${response.status})`,
